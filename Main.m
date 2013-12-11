@@ -68,6 +68,7 @@ handles.output = hObject;
 % brodrigu: add global variable for serial port access
 % also set the default close operation to a custom function.
 global programSettings;
+programSettings.numberOfMotes = 1;
 programSettings.port = serial('COM13', 'BaudRate', 57600);
 fopen(programSettings.port);
 set(gcf, 'CloseRequestFcn', @closeProgram);
@@ -97,6 +98,7 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
+fprintf(programSettings.port, 'R');
 
 
 
@@ -108,13 +110,33 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global programSettings;
-fprintf(programSettings.port, 'T1');
-filename = strcat(date, ' 1 ', int2str(round(cputime)), '.txt');
-fileID = fopen(filename, 'w');
+fprintf(programSettings.port, 'S');
 pause(1);
-while programSettings.port.BytesAvailable > 0
-   fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
+programSettings.filenames = containers.Map(0, 'null');
+for n = 1:programSettings.numberOfMotes
+   command = strcat('T', int2str(n));
+   fprintf(programSettings.port, command);
+   filename = strcat(date, ' ', int2str(n), ' ', int2str(round(cputime)), '.txt');
+   tempMap = containers.Map(n, filename);
+   programSettings.filenames = [programSettings.filenames; tempMap];
+   fileID = fopen(filename, 'w');
+   pause(1);
+   while programSettings.port.BytesAvailable > 0
+      fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
+   end
+   fclose(fileID);
+   graphData();
 end
+
+function graphData()
+global programSettings;
+hold all;
+for n = 1:(programSettings.numberOfMotes)
+    y = load(programSettings.filenames(n));
+    l = size(y);
+    plot(1:l(1), y);
+end
+hold off;
 
 
 % --- Executes on button press in pushbutton3.
