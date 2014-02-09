@@ -22,7 +22,7 @@ function varargout = Main(varargin)
 
 % Edit the above text to modify the response to help Main
 
-% Last Modified by GUIDE v2.5 27-Nov-2013 13:42:12
+% Last Modified by GUIDE v2.5 09-Feb-2014 14:51:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -42,6 +42,7 @@ else
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
+end
 
 
 % --- Override the closing function to close the serial port.
@@ -53,6 +54,7 @@ function closeProgram(hObject, eventdata, handles, varargin)
 global programSettings;
 fclose(programSettings.port);
 delete(gcf);
+end
 
 % --- Executes just before Main is made visible.
 function Main_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -68,9 +70,14 @@ handles.output = hObject;
 % brodrigu: add global variable for serial port access
 % also set the default close operation to a custom function.
 global programSettings;
+
 programSettings.numberOfMotes = 1;
-programSettings.port = serial('COM13', 'BaudRate', 57600);
+radio = instrhwinfo('serial');
+radio = radio.AvailableSerialPorts(1);
+programSettings.port = serial(radio, 'BaudRate', 57600);
 fopen(programSettings.port);
+setRadioDefaults();
+
 set(gcf, 'CloseRequestFcn', @closeProgram);
 
 % Update handles structure
@@ -78,6 +85,23 @@ guidata(hObject, handles);
 
 % UIWAIT makes Main wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
+end
+
+% Set initial parameters:
+%  Calibrate
+%  Set Frequency to 5
+%  Set Precision to LOW
+%  Set Gain to 1
+function setRadioDefaults()
+global programSettings;
+fprintf(programSettings.port, 'C');
+pause(1);
+fprintf(programSettings.port, 'F1');
+pause(1);
+fprintf(programSettings.port, 'PL');
+pause(1);
+fprintf(programSettings.port, 'G1');
+end
 
 
 % --- Outputs from this function are returned to the command line.
@@ -89,6 +113,7 @@ function varargout = Main_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+end
 
 
 % --- Executes on button press in pushbutton1.
@@ -99,6 +124,7 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
 fprintf(programSettings.port, 'R');
+end
 
 
 
@@ -123,9 +149,11 @@ for n = 1:programSettings.numberOfMotes
    pause(1);
    while programSettings.port.BytesAvailable > 0
       fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
+      %fscanf(programSettings.port)
    end
    fclose(fileID);
    graphData();
+end
 end
 
 function graphData()
@@ -137,6 +165,7 @@ for n = 1:(programSettings.numberOfMotes)
     plot(1:l(1), y);
 end
 hold off;
+end
 
 
 % --- Executes on button press in pushbutton3.
@@ -146,9 +175,12 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
+fprintf(programSettings.port, 'C');
+end
 
 
 % --- Executes on selection change in popupmenu2.
+% popupmenu2 = FREQUENCY
 function popupmenu2_Callback(hObject, eventdata, handles)
 % hObject    handle to popupmenu2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -156,6 +188,13 @@ function popupmenu2_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu2
+
+value = get(hObject,'Value');
+message = strcat('F', num2str(value));
+global programSettings;
+fprintf(programSettings.port, message);
+
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -169,9 +208,11 @@ function popupmenu2_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 
 % --- Executes on selection change in popupmenu3.
+% popupmenu3 = PRECISION
 function popupmenu3_Callback(hObject, eventdata, handles)
 % hObject    handle to popupmenu3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -179,6 +220,19 @@ function popupmenu3_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu3 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu3
+
+value = get(hObject,'Value');
+switch value
+    case 1 % 1 = LOW
+        message = 'PL';
+        
+    case 2 % 2 = HIGH
+        message = 'PH';
+end
+
+global programSettings;
+fprintf(programSettings.port, message);
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -192,9 +246,11 @@ function popupmenu3_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 
 % --- Executes on selection change in popupmenu4.
+% popupmenu4 = GAIN
 function popupmenu4_Callback(hObject, eventdata, handles)
 % hObject    handle to popupmenu4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -202,6 +258,12 @@ function popupmenu4_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu4 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu4
+
+value = get(hObject,'Value');
+message = strcat('G', num2str(value));
+global programSettings;
+fprintf(programSettings.port, message);
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -214,4 +276,33 @@ function popupmenu4_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
+end
+
+% TODO(brodrigu): Add validation for this textbox.
+% edit1 = # OF MOTES
+function edit1_Callback(hObject, eventdata, handles)
+% hObject    handle to edit1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit1 as text
+%        str2double(get(hObject,'String')) returns contents of edit1 as a double
+global programSettings;
+motes = get(hObject,'String');
+programSettings.numberOfMotes = motes;
+
+end
+
+% --- Executes during object creation, after setting all properties.
+function edit1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
 end
