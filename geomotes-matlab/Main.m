@@ -71,7 +71,6 @@ handles.output = hObject;
 % also set the default close operation to a custom function.
 global programSettings;
 
-% TODO(brodrigu): Make this a setting in the GUI Interface.
 programSettings.numberOfMotes = 1;
 radio = instrhwinfo('serial');
 radio = radio.AvailableSerialPorts(1);
@@ -176,6 +175,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
+fprintf(programSettings.port, 'C');
 end
 
 
